@@ -1,0 +1,103 @@
+// Minimal working Prisma schema for MVP deployment
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  password              String
+  name                  String
+  bio                   String?
+  age                   Int
+  gender                String?
+  location              String?
+  latitude              Float?
+  longitude             Float?
+  photos                String[]
+  interests             String[]
+  isPremium             Boolean   @default(false)
+  isVerified            Boolean   @default(false)
+  isActive              Boolean   @default(true)
+  dailyPops             Int       @default(3)
+  lastPopReset          DateTime  @default(now())
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  sentMessages     Message[]      @relation("SentMessages")
+  receivedMessages Message[]      @relation("ReceivedMessages")
+  sentMatches      Match[]        @relation("UserMatches")
+  receivedMatches  Match[]        @relation("MatchedWithUser")
+  balloons         Balloon[]
+  notifications    Notification[]
+}
+
+model Message {
+  id         String    @id @default(uuid())
+  senderId   String
+  receiverId String
+  content    String
+  type       String    @default("text")
+  isRead     Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  @@index([senderId])
+  @@index([receiverId])
+}
+
+model Match {
+  id        String   @id @default(uuid())
+  userId    String
+  matchedId String
+  isMatched Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User @relation("UserMatches", fields: [userId], references: [id])
+  matched User @relation("MatchedWithUser", fields: [matchedId], references: [id])
+
+  @@unique([userId, matchedId])
+  @@index([userId])
+  @@index([matchedId])
+}
+
+model Balloon {
+  id        String   @id @default(uuid())
+  userId    String
+  isPopped  Boolean  @default(false)
+  poppedBy  String?
+  poppedAt  DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isPopped])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+}

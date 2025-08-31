@@ -11,19 +11,13 @@ datasource db {
 }
 
 // Enums
-enum AuthProvider {
-  LOCAL
-  GOOGLE
-  APPLE
-  FACEBOOK
-}
-
 enum MessageType {
   TEXT
   IMAGE
   VIDEO
   AUDIO
   GIF
+  VOICE
 }
 
 enum Platform {
@@ -34,16 +28,10 @@ enum Platform {
 
 enum PopType {
   STANDARD
+  SINGLE
+  DOUBLE
   SUPER
   MEGA
-}
-
-enum ReportType {
-  INAPPROPRIATE_CONTENT
-  FAKE_PROFILE
-  HARASSMENT
-  SPAM
-  OTHER
 }
 
 enum ReportStatus {
@@ -89,6 +77,7 @@ model User {
   dailyPops             Int       @default(3)
   lastPopReset          DateTime  @default(now())
   lastLocationUpdate    DateTime  @default(now())
+  lastSeen              DateTime  @default(now())
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   deletedAt             DateTime?
@@ -102,7 +91,8 @@ model User {
   reports          Report[]       @relation("Reporter")
   reportedReports  Report[]       @relation("Reported")
   notifications    Notification[]
-  subscriptions    Subscription[]
+  subscription     Subscription?  @relation("UserSubscription")
+  subscriptions    Subscription[] @relation("UserSubscriptions")
   swipes           Swipe[]
   pops             Pop[]          @relation("UserPops")
   poppedPops       Pop[]          @relation("PoppedPops")
@@ -114,20 +104,22 @@ model User {
   arSessions       ARSession[]
   balloonAllocations BalloonAllocation[]
   eventParticipants EventParticipant[]
+  hostedEvents     GroupEvent[]
 }
 
 model Message {
-  id         String       @id @default(uuid())
-  senderId   String
-  receiverId String
-  chatId     String?
-  content    String
-  type       MessageType  @default(TEXT)
-  isRead     Boolean      @default(false)
-  isDeleted  Boolean      @default(false)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  deletedAt  DateTime?
+  id           String       @id @default(uuid())
+  senderId     String
+  receiverId   String
+  chatId       String?
+  content      String
+  type         MessageType  @default(TEXT)
+  messageType  MessageType  @default(TEXT)
+  isRead       Boolean      @default(false)
+  isDeleted    Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
 
   sender   User  @relation("SentMessages", fields: [senderId], references: [id])
   receiver User  @relation("ReceivedMessages", fields: [receiverId], references: [id])
@@ -139,24 +131,29 @@ model Message {
 }
 
 model Chat {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  isActive  Boolean  @default(true)
+  id             String   @id @default(uuid())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  lastMessageAt  DateTime @default(now())
+  isActive       Boolean  @default(true)
+  isBlocked      Boolean  @default(false)
+  matchId        String?
 
   participants ChatParticipant[]
   messages     Message[]
 }
 
 model ChatParticipant {
-  id           String   @id @default(uuid())
-  chatId       String
-  userId       String
-  lastReadAt   DateTime @default(now())
-  joinedAt     DateTime @default(now())
-  leftAt       DateTime?
-  isTyping     Boolean  @default(false)
-  unreadCount  Int      @default(0)
+  id                   String   @id @default(uuid())
+  chatId               String
+  userId               String
+  lastReadAt           DateTime @default(now())
+  lastRead             DateTime @default(now())
+  joinedAt             DateTime @default(now())
+  leftAt               DateTime?
+  isTyping             Boolean  @default(false)
+  unreadCount          Int      @default(0)
+  notificationsEnabled Boolean  @default(true)
 
   chat Chat @relation(fields: [chatId], references: [id])
   user User @relation(fields: [userId], references: [id])
@@ -166,15 +163,18 @@ model ChatParticipant {
 }
 
 model Match {
-  id        String   @id @default(uuid())
-  userId    String
-  matchedId String
-  isMatched Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(uuid())
+  userId        String
+  matchedId     String
+  matchedUserId String?
+  userAId       String?
+  isMatched     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  user    User @relation("UserMatches", fields: [userId], references: [id])
-  matched User @relation("MatchedWithUser", fields: [matchedId], references: [id])
+  user        User  @relation("UserMatches", fields: [userId], references: [id])
+  matched     User  @relation("MatchedWithUser", fields: [matchedId], references: [id])
+  matchedUser User? @relation("MatchedUser", fields: [matchedUserId], references: [id])
 
   @@unique([userId, matchedId])
   @@index([userId])
@@ -197,26 +197,33 @@ model Balloon {
 }
 
 model Pop {
-  id         String   @id @default(uuid())
-  userId     String
-  poppedId   String
-  type       PopType  @default(STANDARD)
-  isMatched  Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id           String   @id @default(uuid())
+  userId       String
+  poppedId     String
+  targetUserId String?
+  type         PopType  @default(STANDARD)
+  popType      PopType  @default(STANDARD)
+  isMatched    Boolean  @default(false)
+  revealed     Boolean  @default(false)
+  createdAt    DateTime @default(now())
 
-  user       User @relation("UserPops", fields: [userId], references: [id])
-  poppedUser User @relation("PoppedPops", fields: [poppedId], references: [id])
+  user       User  @relation("UserPops", fields: [userId], references: [id])
+  poppedUser User  @relation("PoppedPops", fields: [poppedId], references: [id])
+  targetUser User? @relation("TargetUser", fields: [targetUserId], references: [id])
 
+  @@unique([userId, targetUserId])
   @@index([userId])
   @@index([poppedId])
+  @@index([targetUserId])
 }
 
 model Block {
-  id         String   @id @default(uuid())
-  blockerId  String
-  blockedId  String
-  reason     String?
-  createdAt  DateTime @default(now())
+  id            String   @id @default(uuid())
+  blockerId     String
+  blockedId     String
+  blockedUserId String?
+  reason        String?
+  createdAt     DateTime @default(now())
 
   blocker User @relation("Blocker", fields: [blockerId], references: [id])
   blocked User @relation("Blocked", fields: [blockedId], references: [id])
@@ -234,6 +241,7 @@ model Report {
   contentType  String?
   reason       String
   details      String?
+  description  String?
   status       ReportStatus @default(PENDING)
   resolution   String?
   createdAt    DateTime     @default(now())
@@ -278,9 +286,10 @@ model Subscription {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user     User @relation("UserSubscription", fields: [userId], references: [id])
+  userMany User @relation("UserSubscriptions", fields: [userId], references: [id])
 
-  @@index([userId])
+  @@unique([userId])
   @@index([status])
 }
 
@@ -359,15 +368,20 @@ model ModerationQueue {
 
 model BalloonAllocation {
   id             String   @id @default(uuid())
-  userId         String   @unique
+  userId         String
+  date           DateTime @default(now())
   dailyBalloons  Int      @default(3)
   premiumBalloons Int     @default(0)
   usedToday      Int      @default(0)
+  balloonsUsed   Int      @default(0)
+  maxBalloons    Int      @default(3)
   lastReset      DateTime @default(now())
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
 }
 
 model ARSession {
@@ -397,21 +411,24 @@ model ARExperience {
 }
 
 model GroupEvent {
-  id           String   @id @default(uuid())
-  title        String
-  description  String?
-  type         String
-  location     String?
-  maxParticipants Int   @default(10)
-  startTime    DateTime
-  endTime      DateTime?
-  status       String   @default("SCHEDULED")
-  hostId       String
-  config       Json?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(uuid())
+  title           String
+  name            String?
+  description     String?
+  type            String
+  location        String?
+  maxParticipants Int      @default(10)
+  startTime       DateTime
+  endTime         DateTime?
+  status          String   @default("SCHEDULED")
+  hostId          String
+  entryFee        Float    @default(0)
+  config          Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  participants EventParticipant[]
+  host              User               @relation(fields: [hostId], references: [id])
+  participants      EventParticipant[]
   speedDatingRounds SpeedDatingRound[]
 }
 
@@ -423,7 +440,7 @@ model EventParticipant {
   joinedAt  DateTime @default(now())
 
   event GroupEvent @relation(fields: [eventId], references: [id])
-  user  User      @relation(fields: [userId], references: [id])
+  user  User       @relation(fields: [userId], references: [id])
 
   @@unique([eventId, userId])
   @@index([eventId])
@@ -431,13 +448,15 @@ model EventParticipant {
 }
 
 model SpeedDatingRound {
-  id        String   @id @default(uuid())
-  eventId   String
+  id          String   @id @default(uuid())
+  eventId     String
   roundNumber Int
-  duration  Int      @default(180)
-  startTime DateTime
-  endTime   DateTime?
-  status    String   @default("PENDING")
+  duration    Int      @default(180)
+  startTime   DateTime @default(now())
+  startedAt   DateTime?
+  endTime     DateTime?
+  endedAt     DateTime?
+  status      String   @default("PENDING")
 
   event   GroupEvent         @relation(fields: [eventId], references: [id])
   matches SpeedDatingMatch[]
@@ -446,16 +465,21 @@ model SpeedDatingRound {
 }
 
 model SpeedDatingMatch {
-  id          String   @id @default(uuid())
-  roundId     String
-  userAId     String
-  userBId     String
-  userALiked  Boolean  @default(false)
-  userBLiked  Boolean  @default(false)
-  isMatched   Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id              String   @id @default(uuid())
+  roundId         String
+  userAId         String
+  userBId         String
+  userALiked      Boolean  @default(false)
+  userBLiked      Boolean  @default(false)
+  userAInterested Boolean  @default(false)
+  userBInterested Boolean  @default(false)
+  isMatched       Boolean  @default(false)
+  matched         Boolean  @default(false)
+  createdAt       DateTime @default(now())
 
   round SpeedDatingRound @relation(fields: [roundId], references: [id])
+  userA User             @relation("SpeedDatingUserA", fields: [userAId], references: [id])
+  userB User             @relation("SpeedDatingUserB", fields: [userBId], references: [id])
 
   @@unique([roundId, userAId, userBId])
   @@index([roundId])
@@ -467,6 +491,7 @@ model BalloonPopHistory {
   id        String   @id @default(uuid())
   userId    String
   balloonId String
+  popperId  String?
   arData    Json?
   createdAt DateTime @default(now())
 
