@@ -1,0 +1,52 @@
+{
+  "name": "balloond",
+  "version": "1.0.0",
+  "description": "Balloon'd - Modern Dating App with Balloon Pop Reveal",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:frontend": "cd frontend && npm start",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && expo build:web",
+    "build": "npm run build:backend && npm run build:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test": "npm run test:backend && npm run test:frontend",
+    "db:migrate": "cd backend && npx prisma migrate dev",
+    "db:generate": "cd backend && npx prisma generate",
+    "db:seed": "cd backend && npx prisma db seed",
+    "db:reset": "cd backend && npx prisma migrate reset",
+    "lint": "cd backend && npm run lint && cd ../frontend && npm run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "rm -rf node_modules frontend/node_modules backend/node_modules backend/dist frontend/.expo",
+    "postinstall": "cd backend && npx prisma generate"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/balloond.git"
+  },
+  "keywords": [
+    "dating",
+    "react-native",
+    "nestjs",
+    "expo",
+    "typescript",
+    "postgis"
+  ],
+  "author": "Balloon'd Team",
+  "license": "PROPRIETARY"
+}
