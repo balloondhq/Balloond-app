@@ -9,6 +9,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Add the missing PopType enum
+enum PopType {
+  SINGLE
+  DOUBLE
+  TRIPLE
+  SUPER
+}
+
 model User {
   id                    String    @id @default(uuid())
   email                 String    @unique
@@ -74,6 +82,7 @@ model Match {
 model Balloon {
   id        String   @id @default(uuid())
   userId    String
+  type      PopType  @default(SINGLE)  // Add PopType to balloon
   isPopped  Boolean  @default(false)
   poppedBy  String?
   poppedAt  DateTime?
