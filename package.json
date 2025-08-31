@@ -3,32 +3,15 @@
   "version": "1.0.0",
   "description": "Balloon'd Dating App",
   "private": true,
-  "workspaces": [
-    "backend",
-    "frontend"
-  ],
   "scripts": {
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "build": "npm run build:backend",
-    "build:backend": "cd backend && npm install && npm run build",
-    "build:frontend": "cd frontend && npm install && npm run build",
-    "start": "npm run start:prod",
-    "start:prod": "cd backend && npm run start:prod",
-    "start:dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "cd backend && npm run start:dev",
-    "dev:frontend": "cd frontend && npm start",
-    "test": "npm run test:backend && npm run test:frontend",
-    "test:backend": "cd backend && npm test",
-    "test:frontend": "cd frontend && npm test",
-    "prisma:generate": "cd backend && npx prisma generate",
-    "prisma:migrate": "cd backend && npx prisma migrate deploy",
-    "postinstall": "npm run prisma:generate"
+    "build": "cd backend && npm install && npx prisma generate && npm run build",
+    "start": "cd backend && node dist/main",
+    "install": "cd backend && npm install",
+    "postinstall": "cd backend && npx prisma generate",
+    "migrate": "cd backend && npx prisma migrate deploy"
   },
   "engines": {
-    "node": ">=18.0.0",
+    "node": ">=18.0.0 <25.0.0",
     "npm": ">=8.0.0"
-  },
-  "devDependencies": {
-    "concurrently": "^8.0.0"
   }
 }

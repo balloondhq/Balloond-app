@@ -1,413 +1,178 @@
-// Prisma schema for Balloon'd Dating App Phase 2 with Subscriptions & Moderation
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  extensions = [postgis]
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// User model with location and subscription support
 model User {
-  id              String    @id @default(uuid())
-  email           String    @unique
-  password        String?   // Null for OAuth users
-  provider        AuthProvider @default(LOCAL)
-  providerId      String?   // OAuth provider user ID
-  
-  // Profile information
-  name            String
-  bio             String?
-  age             Int?
-  photos          String[]  // Array of photo URLs
-  prompts         Json?     // Structured prompts and answers
-  
-  // Location data with PostGIS
-  location        Json?     // Store as {lat, lng} for PostGIS queries
-  latitude        Float?
-  longitude       Float?
-  radius          Int       @default(50) // Search radius in km
-  lastLocationUpdate DateTime?
-  
-  // Matching preferences
-  minAge          Int       @default(18)
-  maxAge          Int       @default(99)
-  
-  // Account status & Verification
-  isActive        Boolean   @default(true)
-  isVerified      Boolean   @default(false)
-  verificationStatus VerificationStatus @default(UNVERIFIED)
-  verificationPhoto String?  // Selfie for verification
-  verificationAttempts Int   @default(0)
-  lastVerificationAttempt DateTime?
-  lastSeen        DateTime  @default(now())
-  
-  // Subscription & Premium Features
-  subscriptionTier SubscriptionTier @default(FREE)
-  subscriptionId  String?   // Stripe/IAP subscription ID
-  subscriptionEndDate DateTime?
-  dailyBoosts     Int       @default(0)
-  superPopsRemaining Int    @default(0)
-  
-  // Moderation flags
-  isReported      Boolean   @default(false)
-  isBanned        Boolean   @default(false)
-  bannedUntil     DateTime?
-  moderationNotes String?
-  
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  password              String
+  name                  String
+  bio                   String?
+  age                   Int
+  gender                String?
+  location              String?
+  latitude              Float?
+  longitude             Float?
+  photos                String[]
+  interests             String[]
+  isPremium             Boolean   @default(false)
+  subscriptionTier      String?
+  subscriptionExpiresAt DateTime?
+  isVerified            Boolean   @default(false)
+  isActive              Boolean   @default(true)
+  isBanned              Boolean   @default(false)
+  dailyPops             Int       @default(3)
+  lastPopReset          DateTime  @default(now())
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  deletedAt             DateTime?
+
   // Relations
-  sentPops        Pop[]     @relation("SentPops")
-  receivedPops    Pop[]     @relation("ReceivedPops")
-  matches         Match[]   @relation("UserMatches")
-  matchedWith     Match[]   @relation("MatchedWithUser")
-  sentMessages    Message[] @relation("SentMessages")
-  chats           ChatParticipant[]
-  subscription    Subscription?
-  sentReports     Report[]  @relation("ReportedBy")
-  receivedReports Report[]  @relation("ReportedUser")
-  blockedUsers    Block[]   @relation("Blocker")
-  blockedBy       Block[]   @relation("Blocked")
-  payments        Payment[]
-  pushTokens      PushToken[]
-  
-  // Timestamps
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@index([email])
-  @@index([latitude, longitude])
-  @@index([subscriptionTier])
+  sentMessages     Message[]      @relation("SentMessages")
+  receivedMessages Message[]      @relation("ReceivedMessages")
+  sentMatches      Match[]        @relation("UserMatches")
+  receivedMatches  Match[]        @relation("MatchedWithUser")
+  balloons         Balloon[]
+  reports          Report[]       @relation("Reporter")
+  reportedReports  Report[]       @relation("Reported")
+  notifications    Notification[]
+  subscriptions    Subscription[]
+  swipes           Swipe[]
 }
 
-// Subscription model for managing premium features
-model Subscription {
-  id              String    @id @default(uuid())
-  userId          String    @unique
-  tier            SubscriptionTier
-  stripeSubscriptionId String? // Stripe subscription ID
-  appleReceiptData String?    // Apple IAP receipt
-  googlePurchaseToken String? // Google Play purchase token
-  status          SubscriptionStatus @default(ACTIVE)
-  currentPeriodStart DateTime
-  currentPeriodEnd DateTime
-  cancelAtPeriodEnd Boolean @default(false)
-  
-  // Features based on tier
-  dailyPops       Int       // Daily balloon limit
-  canSeeWhoLiked  Boolean   @default(false)
-  hasBoosts       Boolean   @default(false)
-  hasSuperPops    Boolean   @default(false)
-  hasAdvancedFilters Boolean @default(false)
-  hasThemedBalloons Boolean @default(false)
-  
-  user            User      @relation(fields: [userId], references: [id])
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
-  @@index([userId])
-  @@index([status])
-}
-
-// Payment history
-model Payment {
-  id              String    @id @default(uuid())
-  userId          String
-  amount          Float
-  currency        String    @default("USD")
-  paymentMethod   PaymentMethod
-  stripePaymentIntentId String?
-  appleTransactionId String?
-  googleOrderId   String?
-  status          PaymentStatus
-  description     String?
-  
-  user            User      @relation(fields: [userId], references: [id])
-  
-  createdAt       DateTime  @default(now())
-  
-  @@index([userId])
-  @@index([status])
-}
-
-// Pop interaction model with premium features
-model Pop {
-  id            String    @id @default(uuid())
-  userId        String    // User who popped
-  targetUserId  String    // User whose balloon was popped
-  popType       PopType   @default(SINGLE)
-  isSuperPop    Boolean   @default(false) // Premium feature
-  revealed      Boolean   @default(false)
-  balloonTheme  String?   // Premium themed balloons
-  
-  user          User      @relation("SentPops", fields: [userId], references: [id])
-  targetUser    User      @relation("ReceivedPops", fields: [targetUserId], references: [id])
-  
-  createdAt     DateTime  @default(now())
-  
-  @@unique([userId, targetUserId])
-  @@index([userId])
-  @@index([targetUserId])
-}
-
-// Match model (when both users double pop)
-model Match {
-  id            String    @id @default(uuid())
-  userId        String
-  matchedUserId String
-  isActive      Boolean   @default(true)
-  
-  user          User      @relation("UserMatches", fields: [userId], references: [id])
-  matchedUser   User      @relation("MatchedWithUser", fields: [matchedUserId], references: [id])
-  chat          Chat?
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  @@unique([userId, matchedUserId])
-  @@index([userId])
-  @@index([matchedUserId])
-}
-
-// Chat model
-model Chat {
-  id            String    @id @default(uuid())
-  matchId       String    @unique
-  lastMessageAt DateTime?
-  isBlocked     Boolean   @default(false)
-  
-  match         Match     @relation(fields: [matchId], references: [id])
-  messages      Message[]
-  participants  ChatParticipant[]
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  @@index([matchId])
-}
-
-// Chat participant model
-model ChatParticipant {
-  id            String    @id @default(uuid())
-  chatId        String
-  userId        String
-  lastRead      DateTime  @default(now())
-  isTyping      Boolean   @default(false)
-  notificationsEnabled Boolean @default(true)
-  
-  chat          Chat      @relation(fields: [chatId], references: [id])
-  user          User      @relation(fields: [userId], references: [id])
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  @@unique([chatId, userId])
-  @@index([chatId])
-  @@index([userId])
-}
-
-// Message model with voice support
 model Message {
-  id            String    @id @default(uuid())
-  chatId        String
-  senderId      String
-  content       String?   @db.Text // Null for voice/media messages
-  messageType   MessageType @default(TEXT)
-  mediaUrl      String?   // URL for voice/image/video
-  mediaDuration Int?      // Duration in seconds for voice/video
-  isRead        Boolean   @default(false)
-  isDeleted     Boolean   @default(false)
-  
-  chat          Chat      @relation(fields: [chatId], references: [id])
-  sender        User      @relation("SentMessages", fields: [senderId], references: [id])
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  @@index([chatId])
+  id         String    @id @default(uuid())
+  senderId   String
+  receiverId String
+  content    String
+  type       String    @default("text")
+  isRead     Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
   @@index([senderId])
+  @@index([receiverId])
 }
 
-// Report system for moderation
+model Match {
+  id        String   @id @default(uuid())
+  userId    String
+  matchedId String
+  isMatched Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User @relation("UserMatches", fields: [userId], references: [id])
+  matched User @relation("MatchedWithUser", fields: [matchedId], references: [id])
+
+  @@unique([userId, matchedId])
+  @@index([userId])
+  @@index([matchedId])
+}
+
+model Balloon {
+  id        String   @id @default(uuid())
+  userId    String
+  isPopped  Boolean  @default(false)
+  poppedBy  String?
+  poppedAt  DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isPopped])
+}
+
 model Report {
-  id            String    @id @default(uuid())
-  reporterId    String
-  reportedUserId String
-  reportType    ReportType
-  reason        String
-  description   String?   @db.Text
-  evidence      String[]  // URLs to screenshots/evidence
-  status        ReportStatus @default(PENDING)
-  moderatorNotes String?  @db.Text
-  resolvedAt    DateTime?
-  resolvedBy    String?   // Admin user ID
-  
-  reporter      User      @relation("ReportedBy", fields: [reporterId], references: [id])
-  reportedUser  User      @relation("ReportedUser", fields: [reportedUserId], references: [id])
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
+  id         String   @id @default(uuid())
+  reporterId String
+  reportedId String
+  reason     String
+  details    String?
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  reporter User @relation("Reporter", fields: [reporterId], references: [id])
+  reported User @relation("Reported", fields: [reportedId], references: [id])
+
   @@index([reporterId])
-  @@index([reportedUserId])
+  @@index([reportedId])
   @@index([status])
 }
 
-// Block system
-model Block {
-  id            String    @id @default(uuid())
-  blockerId     String
-  blockedUserId String
-  reason        String?
-  
-  blocker       User      @relation("Blocker", fields: [blockerId], references: [id])
-  blockedUser   User      @relation("Blocked", fields: [blockedUserId], references: [id])
-  
-  createdAt     DateTime  @default(now())
-  
-  @@unique([blockerId, blockedUserId])
-  @@index([blockerId])
-  @@index([blockedUserId])
-}
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 
-// Photo moderation
-model PhotoModeration {
-  id            String    @id @default(uuid())
-  userId        String
-  photoUrl      String
-  aiScore       Float?    // AI confidence score (0-1)
-  aiResult      ModerationResult?
-  isApproved    Boolean?
-  moderatorNotes String?
-  moderatedBy   String?   // Admin user ID
-  
-  createdAt     DateTime  @default(now())
-  moderatedAt   DateTime?
-  
+  user User @relation(fields: [userId], references: [id])
+
   @@index([userId])
-  @@index([isApproved])
-  @@index([aiResult])
+  @@index([isRead])
 }
 
-// Push notification tokens
-model PushToken {
-  id            String    @id @default(uuid())
+model Subscription {
+  id            String   @id @default(uuid())
   userId        String
-  token         String    @unique
-  platform      Platform
-  isActive      Boolean   @default(true)
-  
-  user          User      @relation(fields: [userId], references: [id])
-  
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
+  tier          String
+  status        String
+  startDate     DateTime
+  endDate       DateTime
+  amount        Float
+  currency      String
+  paymentMethod String?
+  stripeId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
   @@index([userId])
-  @@index([token])
+  @@index([status])
 }
 
-// Daily balloon allocation tracking
-model BalloonAllocation {
-  id            String    @id @default(uuid())
-  userId        String
-  date          DateTime  @db.Date
-  balloonsUsed  Int       @default(0)
-  maxBalloons   Int       // Based on subscription tier
-  boostsUsed    Int       @default(0)
-  superPopsUsed Int       @default(0)
-  
-  createdAt     DateTime  @default(now())
-  
-  @@unique([userId, date])
+model Swipe {
+  id        String   @id @default(uuid())
+  userId    String
+  swipedId  String
+  direction String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
   @@index([userId])
-  @@index([date])
+  @@index([swipedId])
 }
 
-// Enums
-enum AuthProvider {
-  LOCAL
-  GOOGLE
-  APPLE
-}
+model ModerationAction {
+  id        String   @id @default(uuid())
+  userId    String?
+  messageId String?
+  action    String
+  reason    String
+  details   Json?
+  createdAt DateTime @default(now())
 
-enum PopType {
-  SINGLE  // Preview (blurred photo)
-  DOUBLE  // Full reveal
-  SUPER   // Premium super pop
-}
-
-enum MessageType {
-  TEXT
-  IMAGE
-  VOICE
-  VIDEO
-  GIF
-}
-
-enum SubscriptionTier {
-  FREE
-  GOLD
-  GLOWING
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  CANCELED
-  EXPIRED
-  PAST_DUE
-  TRIALING
-}
-
-enum PaymentMethod {
-  STRIPE
-  APPLE_IAP
-  GOOGLE_PLAY
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
-}
-
-enum ReportType {
-  FAKE_PROFILE
-  INAPPROPRIATE_CONTENT
-  HARASSMENT
-  SPAM
-  UNDERAGE
-  OTHER
-}
-
-enum ReportStatus {
-  PENDING
-  REVIEWING
-  RESOLVED
-  DISMISSED
-}
-
-enum ModerationResult {
-  SAFE
-  NUDITY
-  VIOLENCE
-  EXPLICIT
-  REVIEW_NEEDED
-}
-
-enum VerificationStatus {
-  UNVERIFIED
-  PENDING
-  VERIFIED
-  REJECTED
-}
-
-enum Platform {
-  IOS
-  ANDROID
-  WEB
+  @@index([userId])
+  @@index([messageId])
 }
