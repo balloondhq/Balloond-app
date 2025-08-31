@@ -1,4 +1,4 @@
-// Minimal working Prisma schema for MVP deployment
+# Minimal working Prisma schema for Railway deployment
 
 generator client {
   provider = "prisma-client-js"
@@ -7,14 +7,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-// Add the missing PopType enum
-enum PopType {
-  SINGLE
-  DOUBLE
-  TRIPLE
-  SUPER
 }
 
 model User {
@@ -44,6 +36,9 @@ model User {
   receivedMatches  Match[]        @relation("MatchedWithUser")
   balloons         Balloon[]
   notifications    Notification[]
+  swipes           Swipe[]
+  reports          Report[]       @relation("Reporter")
+  reportedReports  Report[]       @relation("Reported")
 }
 
 model Message {
@@ -55,6 +50,7 @@ model Message {
   isRead     Boolean   @default(false)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
 
   sender   User @relation("SentMessages", fields: [senderId], references: [id])
   receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
@@ -82,7 +78,6 @@ model Match {
 model Balloon {
   id        String   @id @default(uuid())
   userId    String
-  type      PopType  @default(SINGLE)  // Add PopType to balloon
   isPopped  Boolean  @default(false)
   poppedBy  String?
   poppedAt  DateTime?
@@ -109,4 +104,66 @@ model Notification {
 
   @@index([userId])
   @@index([isRead])
+}
+
+model Swipe {
+  id        String   @id @default(uuid())
+  userId    String
+  swipedId  String
+  direction String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([swipedId])
+}
+
+model Report {
+  id         String   @id @default(uuid())
+  reporterId String
+  reportedId String
+  reason     String
+  details    String?
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  reporter User @relation("Reporter", fields: [reporterId], references: [id])
+  reported User @relation("Reported", fields: [reportedId], references: [id])
+
+  @@index([reporterId])
+  @@index([reportedId])
+  @@index([status])
+}
+
+model Subscription {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  tier          String
+  status        String
+  startDate     DateTime
+  endDate       DateTime
+  amount        Float
+  currency      String
+  paymentMethod String?
+  stripeId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model ModerationAction {
+  id        String   @id @default(uuid())
+  userId    String?
+  messageId String?
+  action    String
+  reason    String
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([messageId])
 }
