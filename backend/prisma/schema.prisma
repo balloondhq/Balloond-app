@@ -10,6 +10,55 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enums
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  APPLE
+  FACEBOOK
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  GIF
+}
+
+enum Platform {
+  IOS
+  ANDROID
+  WEB
+}
+
+enum PopType {
+  STANDARD
+  SUPER
+  MEGA
+}
+
+enum ReportType {
+  INAPPROPRIATE_CONTENT
+  FAKE_PROFILE
+  HARASSMENT
+  SPAM
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
 model User {
   id                    String    @id @default(uuid())
   email                 String    @unique
@@ -21,16 +70,25 @@ model User {
   location              String?
   latitude              Float?
   longitude             Float?
+  radius                Int       @default(50)
+  minAge                Int       @default(18)
+  maxAge                Int       @default(100)
   photos                String[]
   interests             String[]
+  prompts               Json?
+  preferences           Json?
   isPremium             Boolean   @default(false)
   subscriptionTier      String?
   subscriptionExpiresAt DateTime?
   isVerified            Boolean   @default(false)
+  verifiedAt            DateTime?
   isActive              Boolean   @default(true)
   isBanned              Boolean   @default(false)
+  isSuspended           Boolean   @default(false)
+  role                  String    @default("USER")
   dailyPops             Int       @default(3)
   lastPopReset          DateTime  @default(now())
+  lastLocationUpdate    DateTime  @default(now())
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   deletedAt             DateTime?
@@ -46,24 +104,65 @@ model User {
   notifications    Notification[]
   subscriptions    Subscription[]
   swipes           Swipe[]
+  pops             Pop[]          @relation("UserPops")
+  poppedPops       Pop[]          @relation("PoppedPops")
+  blocks           Block[]        @relation("Blocker")
+  blockedBy        Block[]        @relation("Blocked")
+  chats            ChatParticipant[]
+  pushTokens       PushToken[]
+  verifications    Verification[]
+  arSessions       ARSession[]
+  balloonAllocations BalloonAllocation[]
+  eventParticipants EventParticipant[]
 }
 
 model Message {
-  id         String    @id @default(uuid())
+  id         String       @id @default(uuid())
   senderId   String
   receiverId String
+  chatId     String?
   content    String
-  type       String    @default("text")
-  isRead     Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  type       MessageType  @default(TEXT)
+  isRead     Boolean      @default(false)
+  isDeleted  Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
   deletedAt  DateTime?
 
-  sender   User @relation("SentMessages", fields: [senderId], references: [id])
-  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  sender   User  @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User  @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  chat     Chat? @relation(fields: [chatId], references: [id])
 
   @@index([senderId])
   @@index([receiverId])
+  @@index([chatId])
+}
+
+model Chat {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isActive  Boolean  @default(true)
+
+  participants ChatParticipant[]
+  messages     Message[]
+}
+
+model ChatParticipant {
+  id           String   @id @default(uuid())
+  chatId       String
+  userId       String
+  lastReadAt   DateTime @default(now())
+  joinedAt     DateTime @default(now())
+  leftAt       DateTime?
+  isTyping     Boolean  @default(false)
+  unreadCount  Int      @default(0)
+
+  chat Chat @relation(fields: [chatId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([chatId, userId])
+  @@index([userId])
 }
 
 model Match {
@@ -97,15 +196,48 @@ model Balloon {
   @@index([isPopped])
 }
 
-model Report {
+model Pop {
   id         String   @id @default(uuid())
-  reporterId String
-  reportedId String
-  reason     String
-  details    String?
-  status     String   @default("pending")
+  userId     String
+  poppedId   String
+  type       PopType  @default(STANDARD)
+  isMatched  Boolean  @default(false)
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+
+  user       User @relation("UserPops", fields: [userId], references: [id])
+  poppedUser User @relation("PoppedPops", fields: [poppedId], references: [id])
+
+  @@index([userId])
+  @@index([poppedId])
+}
+
+model Block {
+  id         String   @id @default(uuid())
+  blockerId  String
+  blockedId  String
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  blocker User @relation("Blocker", fields: [blockerId], references: [id])
+  blocked User @relation("Blocked", fields: [blockedId], references: [id])
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+model Report {
+  id           String       @id @default(uuid())
+  reporterId   String
+  reportedId   String
+  contentId    String?
+  contentType  String?
+  reason       String
+  details      String?
+  status       ReportStatus @default(PENDING)
+  resolution   String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   reporter User @relation("Reporter", fields: [reporterId], references: [id])
   reported User @relation("Reported", fields: [reportedId], references: [id])
@@ -113,6 +245,7 @@ model Report {
   @@index([reporterId])
   @@index([reportedId])
   @@index([status])
+  @@index([contentId])
 }
 
 model Notification {
@@ -164,6 +297,38 @@ model Swipe {
   @@index([swipedId])
 }
 
+model PushToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  platform  Platform
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String             @id @default(uuid())
+  userId     String
+  type       String
+  status     VerificationStatus @default(PENDING)
+  documents  String[]
+  selfieUrl  String?
+  notes      String?
+  verifiedBy String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
 model ModerationAction {
   id        String   @id @default(uuid())
   userId    String?
@@ -175,4 +340,135 @@ model ModerationAction {
 
   @@index([userId])
   @@index([messageId])
+}
+
+model ModerationQueue {
+  id          String   @id @default(uuid())
+  contentType String
+  contentId   String
+  contentUrl  String?
+  priority    Int      @default(0)
+  status      String   @default("PENDING")
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([status])
+  @@index([priority])
+}
+
+model BalloonAllocation {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  dailyBalloons  Int      @default(3)
+  premiumBalloons Int     @default(0)
+  usedToday      Int      @default(0)
+  lastReset      DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model ARSession {
+  id          String   @id @default(uuid())
+  userId      String
+  sessionType String
+  startTime   DateTime @default(now())
+  endTime     DateTime?
+  data        Json?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model ARExperience {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  type        String
+  isPremium   Boolean  @default(false)
+  config      Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model GroupEvent {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  type         String
+  location     String?
+  maxParticipants Int   @default(10)
+  startTime    DateTime
+  endTime      DateTime?
+  status       String   @default("SCHEDULED")
+  hostId       String
+  config       Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  participants EventParticipant[]
+  speedDatingRounds SpeedDatingRound[]
+}
+
+model EventParticipant {
+  id        String   @id @default(uuid())
+  eventId   String
+  userId    String
+  status    String   @default("JOINED")
+  joinedAt  DateTime @default(now())
+
+  event GroupEvent @relation(fields: [eventId], references: [id])
+  user  User      @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+model SpeedDatingRound {
+  id        String   @id @default(uuid())
+  eventId   String
+  roundNumber Int
+  duration  Int      @default(180)
+  startTime DateTime
+  endTime   DateTime?
+  status    String   @default("PENDING")
+
+  event   GroupEvent         @relation(fields: [eventId], references: [id])
+  matches SpeedDatingMatch[]
+
+  @@index([eventId])
+}
+
+model SpeedDatingMatch {
+  id          String   @id @default(uuid())
+  roundId     String
+  userAId     String
+  userBId     String
+  userALiked  Boolean  @default(false)
+  userBLiked  Boolean  @default(false)
+  isMatched   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  round SpeedDatingRound @relation(fields: [roundId], references: [id])
+
+  @@unique([roundId, userAId, userBId])
+  @@index([roundId])
+  @@index([userAId])
+  @@index([userBId])
+}
+
+model BalloonPopHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  balloonId String
+  arData    Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

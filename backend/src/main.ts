@@ -2,12 +2,12 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as compression from 'compression';
-import * as helmet from 'helmet';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Security
+  // Security - Use helmet as default export
   app.use(helmet({
     contentSecurityPolicy: false, // Disable for API
   }));
