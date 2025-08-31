@@ -1,0 +1,146 @@
+# Environment Variables
+.env
+.env.local
+.env.production
+.env.*.local
+*.env
+!.env.example
+
+# API Keys and Secrets
+**/secrets/
+**/credentials/
+*.pem
+*.key
+*.p12
+*.p8
+*.cert
+*.crt
+service-account.json
+google-services.json
+GoogleService-Info.plist
+
+# Private Keys
+private-key.pem
+public-key.pem
+jwt-private.key
+jwt-public.key
+
+# AWS
+.aws/
+aws-exports.js
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+database.sqlite
+
+# Dependencies
+node_modules/
+bower_components/
+vendor/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+playwright-report/
+stress-test-report-*.json
+
+# Production builds
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+public/build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Mobile
+*.ipa
+*.apk
+*.aab
+*.dSYM.zip
+*.dSYM
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# React Native
+*.jsbundle
+ios/Pods/
+android/.gradle/
+android/app/build/
+android/build/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# Upload directories
+uploads/
+media/
+public/uploads/
+
+# Cache
+.cache/
+.npm/
+.yarn/
+.pnp.*
+*.tsbuildinfo
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Monitoring
+.sentryclirc
+
+# Keep these files
+!.gitkeep
+!.env.example
+!.env.test.example

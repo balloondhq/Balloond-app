@@ -1,0 +1,17 @@
+{
+  "name": "balloond",
+  "version": "1.0.0",
+  "description": "Balloon'd Dating App",
+  "private": true,
+  "scripts": {
+    "build": "cd backend && npm install && npx prisma generate && npm run build",
+    "start": "cd backend && node dist/main",
+    "install": "cd backend && npm install",
+    "postinstall": "cd backend && npx prisma generate",
+    "migrate": "cd backend && npx prisma migrate deploy"
+  },
+  "engines": {
+    "node": ">=18.0.0 <25.0.0",
+    "npm": ">=8.0.0"
+  }
+}
