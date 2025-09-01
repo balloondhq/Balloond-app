@@ -14,6 +14,8 @@ import {
   Dimensions,
   RefreshControl,
   Alert,
+  Image,
+  ImageBackground,
 } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -210,16 +212,30 @@ export const BalloonGridScreen: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>Discover</Text>
-        <View style={styles.allocationContainer}>
-          <Text style={[styles.allocationText, { color: theme.colors.textSecondary }]}>
-            {allocation.max - allocation.used} balloons left today
-          </Text>
-        </View>
-      </View>
+    <ImageBackground
+      source={require('../../../assets/interface.png')}
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header with blur effect */}
+        <BlurView intensity={20} tint="light" style={styles.header}>
+          <View style={styles.headerContent}>
+            <View style={styles.logoContainer}>
+              <Image 
+                source={require('../../../assets/balloond-logo.svg')}
+                style={styles.headerLogo}
+                resizeMode="contain"
+              />
+              <Text style={styles.title}>Balloon'd</Text>
+            </View>
+            <View style={styles.allocationContainer}>
+              <Text style={styles.allocationText}>
+                🎈 {allocation.max - allocation.used} left today
+              </Text>
+            </View>
+          </View>
+        </BlurView>
 
       {/* Balloon Grid */}
       <FlatList
@@ -244,7 +260,8 @@ export const BalloonGridScreen: React.FC = () => {
           </View>
         }
       />
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 };
 
@@ -252,11 +269,28 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  safeArea: {
+    flex: 1,
+  },
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderRadius: 0,
+    overflow: 'hidden',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerLogo: {
+    width: 32,
+    height: 32,
+    marginRight: 12,
   },
   title: {
     fontSize: 32,

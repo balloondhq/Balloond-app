@@ -11,8 +11,11 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Dimensions,
+  Image,
+  ImageBackground,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 
@@ -23,22 +26,31 @@ export const WelcomeScreen: React.FC = () => {
   const navigation = useNavigation<any>();
 
   return (
-    <LinearGradient
-      colors={[theme.colors.background, '#FFF']}
+    <ImageBackground 
+      source={require('../../../assets/photo blur bg.jpg')}
       style={styles.container}
+      resizeMode="cover"
     >
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
-          {/* Logo placeholder */}
-          <View style={styles.logoContainer}>
-            <View style={[styles.balloon, { backgroundColor: theme.colors.primary }]} />
-            <Text style={[styles.appName, { color: theme.colors.primary }]}>
-              Balloon'd
-            </Text>
-            <Text style={[styles.tagline, { color: theme.colors.textSecondary }]}>
-              Pop to reveal, double pop to connect
-            </Text>
-          </View>
+      <LinearGradient
+        colors={['rgba(0,0,0,0.3)', 'rgba(255,255,255,0.8)', 'rgba(255,255,255,0.95)']}
+        style={styles.overlay}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.content}>
+            {/* Logo */}
+            <View style={styles.logoContainer}>
+              <Image 
+                source={require('../../assets/balloond-logo.svg')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+              <Text style={styles.appName}>
+                Balloon'd
+              </Text>
+              <Text style={styles.tagline}>
+                Pop to reveal, double pop to connect 💕
+              </Text>
+            </View>
 
           {/* Buttons */}
           <View style={styles.buttonContainer}>
@@ -94,6 +106,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  overlay: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
   },
@@ -105,6 +120,11 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
     marginTop: height * 0.15,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 20,
   },
   balloon: {
     width: 80,
