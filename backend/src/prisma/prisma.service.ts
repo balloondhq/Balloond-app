@@ -20,11 +20,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   async onModuleInit() {
     await this.$connect();
-    
-    // Enable PostGIS extension
-    await this.$executeRaw`CREATE EXTENSION IF NOT EXISTS postgis;`;
-    
-    console.log('✅ Database connected with PostGIS enabled');
+    console.log('✅ Database connected successfully');
   }
 
   async onModuleDestroy() {
@@ -32,15 +28,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   /**
-   * Find users within a specific radius using PostGIS
+   * Find users within a specific radius using standard PostgreSQL
    * @param lat User's latitude
    * @param lng User's longitude
    * @param radiusKm Search radius in kilometers
    */
   async findNearbyUsers(lat: number, lng: number, radiusKm: number, userId: string) {
-    const radiusMeters = radiusKm * 1000;
-    
-    // Using raw query for PostGIS ST_DWithin function
+    // Using Haversine formula approximation for distance calculation
+    // This works with standard PostgreSQL without PostGIS
     const nearbyUsers = await this.$queryRaw`
       SELECT 
         id, 
@@ -51,21 +46,30 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         prompts,
         latitude,
         longitude,
-        ST_Distance(
-          ST_MakePoint(longitude, latitude)::geography,
-          ST_MakePoint(${lng}, ${lat})::geography
-        ) as distance
+        (
+          6371 * acos(
+            cos(radians(${lat})) * 
+            cos(radians(latitude)) * 
+            cos(radians(longitude) - radians(${lng})) + 
+            sin(radians(${lat})) * 
+            sin(radians(latitude))
+          )
+        ) AS distance
       FROM "User"
       WHERE 
         id != ${userId}
         AND latitude IS NOT NULL 
         AND longitude IS NOT NULL
-        AND ST_DWithin(
-          ST_MakePoint(longitude, latitude)::geography,
-          ST_MakePoint(${lng}, ${lat})::geography,
-          ${radiusMeters}
-        )
         AND "isActive" = true
+        AND (
+          6371 * acos(
+            cos(radians(${lat})) * 
+            cos(radians(latitude)) * 
+            cos(radians(longitude) - radians(${lng})) + 
+            sin(radians(${lat})) * 
+            sin(radians(latitude))
+          )
+        ) <= ${radiusKm}
       ORDER BY distance
       LIMIT 50;
     `;
