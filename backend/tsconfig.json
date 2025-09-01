@@ -15,6 +15,22 @@
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false
-  }
+    "forceConsistentCasingInFileNames": false,
+    "noEmitOnError": false
+  },
+  "include": [
+    "src/main-minimal.ts",
+    "src/app-minimal.module.ts",
+    "src/health/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/modules",
+    "src/main.ts",
+    "src/app.module.ts",
+    "src/app.controller.ts",
+    "src/app.service.ts",
+    "src/prisma"
+  ]
 }

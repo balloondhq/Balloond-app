@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as AWS from 'aws-sdk';
-import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
-import * as ffmpeg from 'fluent-ffmpeg';
 import { Readable } from 'stream';
 
 interface MediaOptions {

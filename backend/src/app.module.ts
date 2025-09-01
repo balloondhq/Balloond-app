@@ -1,16 +1,12 @@
 /**
  * Root application module for Balloon'd backend
- * Imports and configures all feature modules
+ * Minimal version for Railway deployment
  */
 
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from './modules/auth/auth.module';
-import { UsersModule } from './modules/users/users.module';
-import { MatchingModule } from './modules/matching/matching.module';
-import { ChatModule } from './modules/chat/chat.module';
-import { LocationModule } from './modules/location/location.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { HealthModule } from './health/health.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -25,12 +21,8 @@ import { AppService } from './app.service';
     // Database module
     PrismaModule,
     
-    // Feature modules
-    AuthModule,
-    UsersModule,
-    MatchingModule,
-    ChatModule,
-    LocationModule,
+    // Essential modules
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

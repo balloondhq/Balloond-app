@@ -1,6 +1,5 @@
-// Sentence Encoder for NLP-based prompt matching
-import * as tf from '@tensorflow/tfjs-node';
-import * as use from '@tensorflow-models/universal-sentence-encoder';
+// Sentence Encoder for NLP-based prompt matching (fallback implementation)
+// TensorFlow dependencies removed for easier deployment
 
 export class SentenceEncoder {
   private model: any;
@@ -8,15 +7,10 @@ export class SentenceEncoder {
 
   async initialize() {
     if (!this.initialized) {
-      try {
-        this.model = await use.load();
-        this.initialized = true;
-        console.log('Sentence encoder initialized successfully');
-      } catch (error) {
-        console.error('Error loading sentence encoder:', error);
-        // Fallback to basic text processing
-        this.initialized = false;
-      }
+      // Use basic text processing (TensorFlow dependencies removed)
+      console.log('Using fallback text processing (no ML dependencies)');
+      this.model = null;
+      this.initialized = true;
     }
   }
 
