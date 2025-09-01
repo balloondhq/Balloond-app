@@ -1,8 +1,3 @@
-/**
- * Welcome Screen
- * Initial landing screen for unauthenticated users
- */
-
 import React from 'react';
 import {
   View,
@@ -10,95 +5,34 @@ import {
   StyleSheet,
   TouchableOpacity,
   SafeAreaView,
-  Dimensions,
-  Image,
-  ImageBackground,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { useTheme } from '../../contexts/ThemeContext';
-import { useNavigation } from '@react-navigation/native';
-
-const { width, height } = Dimensions.get('window');
 
 export const WelcomeScreen: React.FC = () => {
-  const theme = useTheme();
-  const navigation = useNavigation<any>();
-
   return (
-    <ImageBackground 
-      source={require('../../../assets/photo blur bg.jpg')}
-      style={styles.container}
-      resizeMode="cover"
-    >
-      <LinearGradient
-        colors={['rgba(0,0,0,0.3)', 'rgba(255,255,255,0.8)', 'rgba(255,255,255,0.95)']}
-        style={styles.overlay}
-      >
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.content}>
-            {/* Logo */}
-            <View style={styles.logoContainer}>
-              <Image 
-                source={require('../../assets/balloond-logo.svg')}
-                style={styles.logo}
-                resizeMode="contain"
-              />
-              <Text style={styles.appName}>
-                Balloon'd
-              </Text>
-              <Text style={styles.tagline}>
-                Pop to reveal, double pop to connect 💕
-              </Text>
-            </View>
-
-          {/* Buttons */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[styles.primaryButton, { backgroundColor: theme.colors.primary }]}
-              onPress={() => navigation.navigate('Signup')}
-            >
-              <Text style={styles.primaryButtonText}>Create Account</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.secondaryButton, { borderColor: theme.colors.primary }]}
-              onPress={() => navigation.navigate('Login')}
-            >
-              <Text style={[styles.secondaryButtonText, { color: theme.colors.primary }]}>
-                Sign In
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.divider}>
-              <View style={[styles.line, { backgroundColor: theme.colors.border }]} />
-              <Text style={[styles.dividerText, { color: theme.colors.textLight }]}>
-                or continue with
-              </Text>
-              <View style={[styles.line, { backgroundColor: theme.colors.border }]} />
-            </View>
-
-            {/* OAuth buttons */}
-            <View style={styles.oauthContainer}>
-              <TouchableOpacity
-                style={[styles.oauthButton, { backgroundColor: '#fff' }]}
-              >
-                <Text style={styles.oauthText}>G</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.oauthButton, { backgroundColor: '#000' }]}
-              >
-                <Text style={[styles.oauthText, { color: '#fff' }]}>🍎</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <Text style={[styles.terms, { color: theme.colors.textLight }]}>
-            By continuing, you agree to our Terms of Service and Privacy Policy
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <View style={styles.logoContainer}>
+          <Text style={styles.appName}>Balloon'd</Text>
+          <Text style={styles.tagline}>
+            Pop to reveal, double pop to connect 💕
           </Text>
         </View>
-      </SafeAreaView>
-    </LinearGradient>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.primaryButton}>
+            <Text style={styles.primaryButtonText}>Create Account</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.secondaryButton}>
+            <Text style={styles.secondaryButtonText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.terms}>
+          By continuing, you agree to our Terms of Service and Privacy Policy
+        </Text>
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -119,7 +53,7 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginTop: height * 0.15,
+    marginTop: 100,
   },
   logo: {
     width: 120,
