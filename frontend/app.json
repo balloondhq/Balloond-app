@@ -92,8 +92,8 @@
       "eas": {
         "projectId": "YOUR_EAS_PROJECT_ID"
       },
-      "apiUrl": "https://api.balloond.com",
-      "wsUrl": "wss://api.balloond.com",
+      "apiUrl": "https://balloond-app-production.up.railway.app",
+      "wsUrl": "wss://balloond-app-production.up.railway.app",
       "stripePublishableKey": "pk_live_YOUR_STRIPE_KEY",
       "environment": "production",
       "features": {
