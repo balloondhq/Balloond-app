@@ -52,7 +52,7 @@
     "aws-sdk": "^2.1691.0",
     "firebase-admin": "^12.5.0",
     "stripe": "^16.12.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^2.0.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.0",
